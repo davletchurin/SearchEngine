@@ -7,6 +7,7 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.ErrorResponse;
 import searchengine.dto.IndexingResponse;
+import searchengine.dto.indexing.IndexPageRequestDto;
 import searchengine.dto.indexing.IndexingResponseDto;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
@@ -71,6 +72,12 @@ public class IndexingService {
         for (SiteIndexer siteIndexer : siteIndexerList) {
             siteIndexer.stopIndexing();
         }
+        return new IndexingResponseDto();
+    }
+
+    public IndexingResponse indexPage(IndexPageRequestDto requestDto) {
+        String url = requestDto.getUrl();
+
         return new IndexingResponseDto();
     }
 
