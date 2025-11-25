@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import searchengine.config.RequestSettings;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.model.Status;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
@@ -34,6 +33,7 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
     private String relUrl;
     private Set<String> uniqueUrls;
     private List<ForkJoinTask<Boolean>> forkJoinTasks;
+    private Boolean indexPath;
 
     @Override
     protected Boolean compute() {
@@ -55,6 +55,10 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
         pageRepository.save(pageEntity);
         siteEntity.setStatusTime(LocalDateTime.now());
         siteRepository.save(siteEntity);
+
+        if (indexPath) {
+            return true;
+        }
 
         Map<String, String> children = getLinks(document);
 

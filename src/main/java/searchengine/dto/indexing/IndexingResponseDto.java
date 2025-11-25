@@ -1,7 +1,6 @@
 package searchengine.dto.indexing;
 
 import lombok.Getter;
-import searchengine.dto.IndexingResponse;
 
 
 @Getter

@@ -6,7 +6,7 @@ import searchengine.config.RequestSettings;
 import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.ErrorResponse;
-import searchengine.dto.IndexingResponse;
+import searchengine.dto.indexing.IndexingResponse;
 import searchengine.dto.indexing.IndexPageRequestDto;
 import searchengine.dto.indexing.IndexingResponseDto;
 import searchengine.model.SiteEntity;
@@ -28,7 +28,7 @@ public class IndexingService {
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final RequestSettings jsoupRequestSettings;
-    private final SitesList list;
+    private final SitesList sitesList;
     private ForkJoinPool pool = new ForkJoinPool();
     private List<SiteIndexer> siteIndexerList = new ArrayList<>();
 
@@ -43,12 +43,12 @@ public class IndexingService {
             return new ErrorResponse("Индексация уже запущена");
         }
 
-        for (Site site : list.getSites()) {
+        for (Site site : sitesList.getSites()) {
             SiteEntity siteEntity = toSiteEntity(site);
             siteRepository.save(siteEntity);
             SiteIndexer siteIndexer = createSiteIndexer(siteEntity);
-            siteIndexer.startIndexing();
             siteIndexerList.add(siteIndexer);
+            siteIndexer.startIndexing();
         }
         return new IndexingResponseDto();
     }
@@ -77,6 +77,19 @@ public class IndexingService {
 
     public IndexingResponse indexPage(IndexPageRequestDto requestDto) {
         String url = requestDto.getUrl();
+        List<SiteEntity> siteEntities = siteRepository.findAll()
+                .stream()
+                .filter(site -> url.matches(site.getUrl() + ".*"))
+                .toList();
+
+        if (siteEntities.isEmpty() || url.matches("https?://\\S+")) {
+            new ErrorResponse("Данная страница находится за пределами сайтов,\n" +
+                    " указанных в конфигурационном файле");
+        }
+
+        SiteEntity siteEntity = siteEntities.get(0);
+        SiteIndexer siteIndexer = createSiteIndexer(siteEntity);
+        siteIndexer.indexPath(url);
 
         return new IndexingResponseDto();
     }

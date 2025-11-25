@@ -1,10 +1,10 @@
 package searchengine.dto;
 
 import lombok.Getter;
-import lombok.Setter;
+import searchengine.dto.indexing.IndexingResponse;
 
 @Getter
-public final class ErrorResponse implements IndexingResponse {
+public final class ErrorResponse implements Response, IndexingResponse {
     private final boolean result = false;
     private final String error;
 

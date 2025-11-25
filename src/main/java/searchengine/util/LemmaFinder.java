@@ -2,6 +2,7 @@ package searchengine.util;
 
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
+import org.jsoup.nodes.Document;
 
 import java.io.IOException;
 import java.util.*;
@@ -58,23 +59,8 @@ public class LemmaFinder {
         return lemmas;
     }
 
-    public static String removeHtmlTags(String html) {
-        if (html == null) {
-            return null;
-        }
-
-        String cleaned = html
-                .replaceAll("<script[^>]*>[\\s\\S]*?</script>", "")
-                .replaceAll("<style[^>]*>[\\s\\S]*?</style>", "")
-                .replaceAll("<[^>]*>", "")
-                .replaceAll("\\s+", " ")
-                .trim();
-
-        return cleaned
-                .replace("&nbsp;", " ")
-                .replace("&amp;", "&")
-                .replace("&lt;", "<")
-                .replace("&gt;", ">");
+    public String removeHtmlTags(Document document) {
+        return document.text();
     }
 
 

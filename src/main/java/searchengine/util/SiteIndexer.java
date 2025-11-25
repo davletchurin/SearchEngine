@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 import searchengine.config.RequestSettings;
+import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
 import searchengine.repositories.PageRepository;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Getter
 @Setter
@@ -52,6 +55,13 @@ public class SiteIndexer {
         siteRepository.save(siteEntity);
     }
 
+    public void indexPath(String absUrl) {
+        IndexerExecutor executor = createExecutor();
+        executor.setRelUrl(getRelUrl(absUrl));
+        executor.setIndexPath(true);
+        pool.submit(executor);
+    }
+
     public IndexerExecutor createExecutor() {
         IndexerExecutor executor = new IndexerExecutor();
         Set<String> uniqueUrls = new HashSet<>();
@@ -63,14 +73,30 @@ public class SiteIndexer {
         executor.setRelUrl("/");
         executor.setUniqueUrls(uniqueUrls);
         executor.setForkJoinTasks(siteIndexerRecursiveTasks);
+        executor.setIndexPath(false);
         return executor;
     }
 
-//    public Set<String> getPaths() {
-//        List<String> path = pageRepository.findPathsBySiteId(siteEntity);
-//        if (path == null) {
-//            return new HashSet<>();
-//        }
-//        return new HashSet<>(path);
-//    }
+    public String getRelUrl(String absUrl) {
+        Pattern pattern = java.util.regex.Pattern.compile("https?://[^/]+(/[^?#]*)");
+        Matcher matcher = pattern.matcher(absUrl);
+
+        if (matcher.find()) {
+            String path = matcher.group(1);
+            return path.isEmpty() ? "/" : path;
+        }
+        return "/";
+    }
+
+    public Set<String> getPaths() {
+        List<PageEntity> pageEntities = pageRepository.findAllBySiteId(siteEntity);
+        if (pageEntities == null) {
+            return new HashSet<>();
+        }
+        Set<String> paths = new HashSet<>();
+        for (PageEntity pageEntity : pageEntities) {
+            paths.add(pageEntity.getPath());
+        }
+        return paths;
+    }
 }
