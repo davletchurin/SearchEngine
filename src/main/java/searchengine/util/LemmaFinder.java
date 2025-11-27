@@ -31,7 +31,7 @@ public class LemmaFinder {
      * @param text текст из которого будут выбираться леммы
      * @return ключ является леммой, а значение количеством найденных лемм
      */
-    public HashMap<String, Integer> collectLemmas(String text) {
+    public HashMap<String, Integer> getLemmaMap(String text) {
         String[] words = arrayContainsRussianWords(text);
         HashMap<String, Integer> lemmas = new HashMap<>();
 

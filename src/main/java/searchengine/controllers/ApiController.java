@@ -1,8 +1,10 @@
 package searchengine.controllers;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import searchengine.dto.Response;
 import searchengine.dto.indexing.IndexPageRequestDto;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.services.IndexingService;
@@ -36,8 +38,8 @@ public class ApiController {
     }
 
     @PostMapping("/indexPage")
-    public ResponseEntity indexPage(@RequestBody IndexPageRequestDto requestDto) {
-        return new ResponseEntity<>(indexingService.indexPage(requestDto), HttpStatus.OK);
+    public ResponseEntity indexPage(@RequestParam String url) {
+        return new ResponseEntity<>(indexingService.indexPage(url), HttpStatus.OK);
     }
 
     @GetMapping("/pool")

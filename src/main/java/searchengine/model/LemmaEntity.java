@@ -6,7 +6,9 @@ import lombok.Setter;
 import javax.persistence.*;
 
 @Entity
-@Table(name = "lemma")
+@Table(name = "lemma", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_lemma_site_id_lemma", columnNames = {"site_id", "lemma"})
+})
 @Getter
 @Setter
 public class LemmaEntity {
@@ -22,5 +24,5 @@ public class LemmaEntity {
     private String lemma;
 
     @Column(columnDefinition = "INT", nullable = false)
-    private Integer frequency; // количество страниц, на которых слово встречается хотя бы один раз
+    private Integer frequency;
 }

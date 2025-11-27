@@ -7,29 +7,33 @@ import searchengine.config.Site;
 import searchengine.config.SitesList;
 import searchengine.dto.ErrorResponse;
 import searchengine.dto.indexing.IndexingResponse;
-import searchengine.dto.indexing.IndexPageRequestDto;
 import searchengine.dto.indexing.IndexingResponseDto;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
+import searchengine.repositories.IndexRepository;
+import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 import searchengine.util.SiteIndexer;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class IndexingService {
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
+    private final LemmaRepository lemmaRepository;
+    private final IndexRepository indexRepository;
     private final RequestSettings jsoupRequestSettings;
     private final SitesList sitesList;
-    private ForkJoinPool pool = new ForkJoinPool();
+    private ForkJoinPool pool = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
     private List<SiteIndexer> siteIndexerList = new ArrayList<>();
 
     public IndexingResponse startIndexing() {
@@ -44,7 +48,7 @@ public class IndexingService {
         }
 
         for (Site site : sitesList.getSites()) {
-            SiteEntity siteEntity = toSiteEntity(site);
+            SiteEntity siteEntity = createSiteEntity(site);
             siteRepository.save(siteEntity);
             SiteIndexer siteIndexer = createSiteIndexer(siteEntity);
             siteIndexerList.add(siteIndexer);
@@ -75,21 +79,10 @@ public class IndexingService {
         return new IndexingResponseDto();
     }
 
-    public IndexingResponse indexPage(IndexPageRequestDto requestDto) {
-        String url = requestDto.getUrl();
-        List<SiteEntity> siteEntities = siteRepository.findAll()
-                .stream()
-                .filter(site -> url.matches(site.getUrl() + ".*"))
-                .toList();
-
-        if (siteEntities.isEmpty() || url.matches("https?://\\S+")) {
-            new ErrorResponse("Данная страница находится за пределами сайтов,\n" +
-                    " указанных в конфигурационном файле");
+    public IndexingResponse indexPage(String url) {
+        if (url.isEmpty()) {
+            return new ErrorResponse("Задан пустой запрос");
         }
-
-        SiteEntity siteEntity = siteEntities.get(0);
-        SiteIndexer siteIndexer = createSiteIndexer(siteEntity);
-        siteIndexer.indexPath(url);
 
         return new IndexingResponseDto();
     }
@@ -100,7 +93,7 @@ public class IndexingService {
         siteRepository.deleteById(id);
     }
 
-    private SiteEntity toSiteEntity(Site site) {
+    private SiteEntity createSiteEntity(Site site) {
         Optional<SiteEntity> entityOptional = siteRepository.findByUrl(site.getUrl());
         if (entityOptional.isPresent()) {
             SiteEntity entity = entityOptional.get();
@@ -123,7 +116,41 @@ public class IndexingService {
         siteIndexer.setPageRepository(pageRepository);
         siteIndexer.setJsoupRequestSettings(jsoupRequestSettings);
         siteIndexer.setSiteEntity(siteEntity);
+        siteIndexer.setLemmaRepository(lemmaRepository);
+        siteIndexer.setIndexRepository(indexRepository);
         return siteIndexer;
+    }
+
+    private Map<String, String> getAbsUrlsForIndexPage (String url) {
+        Map<String, String> urls = new HashMap<>();
+        if (url.matches("^/.*")) {
+            for(Site site : sitesList.getSites()) {
+                urls.put(site.getUrl() + url.replaceFirst("/", ""), url);
+            }
+            return urls;
+        }
+
+        if (url.matches("^https?://.*")) {
+            String rootUrl = getRootUrl(url);
+
+
+            return urls;
+        }
+
+        return null;
+    }
+
+    private String getRootUrl(String url) {
+        Pattern pattern = Pattern.compile("https?://[^/]+/?");
+        Matcher matcher = pattern.matcher(url);
+        String rootUrl = "";
+        while (matcher.find()) {
+            rootUrl = matcher.group();
+            if (!rootUrl.matches(".*/$")) {
+                rootUrl = rootUrl + "/";
+            }
+        }
+        return rootUrl;
     }
 
     public void printPoolStats() {

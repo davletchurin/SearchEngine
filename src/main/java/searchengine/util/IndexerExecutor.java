@@ -10,8 +10,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 import searchengine.config.RequestSettings;
-import searchengine.model.PageEntity;
-import searchengine.model.SiteEntity;
+import searchengine.model.*;
+import searchengine.repositories.IndexRepository;
+import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
@@ -34,9 +35,16 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
     private Set<String> uniqueUrls;
     private List<ForkJoinTask<Boolean>> forkJoinTasks;
     private Boolean indexPath;
+    private LemmaFinder lemmaFinder;
+    private LemmaRepository lemmaRepository;
+    private IndexRepository indexRepository;
 
     @Override
     protected Boolean compute() {
+        if (isCancelled()) {
+            return null;
+        }
+
         if (uniqueUrls.contains(relUrl)) {
             return false;
         }
@@ -52,9 +60,11 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
         }
 
         PageEntity pageEntity = createPageEntity(response, document);
-        pageRepository.save(pageEntity);
+        pageEntity = pageRepository.save(pageEntity);
         siteEntity.setStatusTime(LocalDateTime.now());
         siteRepository.save(siteEntity);
+
+        createLemmasAndIndexes(pageEntity, document);
 
         if (indexPath) {
             return true;
@@ -74,13 +84,50 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
             executor.join();
         }
 
-//        if (relUrl.equals("/")) {
-//            System.out.println(siteEntity.getName() + " is indexed");
-//            siteEntity.setStatus(Status.INDEXED);
-//            siteRepository.save(siteEntity);
-//        }
+        if (relUrl.equals("/")) {
+            siteEntity.setStatus(Status.INDEXED);
+            siteRepository.save(siteEntity);
+        }
 
         return true;
+    }
+
+    private void createLemmasAndIndexes(PageEntity pageEntity, Document document) {
+        String htmlText = lemmaFinder.removeHtmlTags(document);
+        HashMap<String, Integer> lemmas = lemmaFinder.getLemmaMap(htmlText);
+
+        List<IndexEntity> indexEntities = new ArrayList<>();
+        for (String lemma : lemmas.keySet()) {
+            LemmaEntity lemmaEntity = lemmaRepository.findBySiteIdAndLemma(siteEntity, lemma).orElse(null);
+            if (lemmaEntity != null) {
+                lemmaEntity.setFrequency(lemmaEntity.getFrequency() + 1);
+            } else {
+                lemmaEntity = createLemma(lemma);
+            }
+            lemmaEntity = lemmaRepository.save(lemmaEntity);
+
+            float rank = lemmas.get(lemma);
+            IndexEntity indexEntity = createIndex(pageEntity,lemmaEntity,rank);
+            indexEntities.add(indexEntity);
+        }
+
+        indexRepository.saveAll(indexEntities);
+    }
+
+    private IndexEntity createIndex(PageEntity pageEntity, LemmaEntity lemmaEntity, Float rank) {
+        IndexEntity indexEntity = new IndexEntity();
+        indexEntity.setPageId(pageEntity);
+        indexEntity.setLemmaId(lemmaEntity);
+        indexEntity.setRank(rank);
+        return indexEntity;
+    }
+
+    private LemmaEntity createLemma(String lemma) {
+        LemmaEntity lemmaEntity = new LemmaEntity();
+        lemmaEntity.setLemma(lemma);
+        lemmaEntity.setSiteId(siteEntity);
+        lemmaEntity.setFrequency(1);
+        return lemmaEntity;
     }
 
     private Connection.Response getResponse() {
@@ -154,6 +201,11 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
         executor.setAbsUrl(child);
         executor.setRelUrl(children.get(child));
         executor.setUniqueUrls(uniqueUrls);
+        executor.setForkJoinTasks(forkJoinTasks);
+        executor.setIndexPath(false);
+        executor.setLemmaRepository(lemmaRepository);
+        executor.setIndexRepository(indexRepository);
+        executor.setLemmaFinder(lemmaFinder);
         return executor;
     }
 }

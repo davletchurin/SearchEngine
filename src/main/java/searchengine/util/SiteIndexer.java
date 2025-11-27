@@ -7,9 +7,12 @@ import searchengine.config.RequestSettings;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
+import searchengine.repositories.IndexRepository;
+import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -27,9 +30,10 @@ public class SiteIndexer {
     private SiteEntity siteEntity;
     private SiteRepository siteRepository;
     private PageRepository pageRepository;
+    private LemmaRepository lemmaRepository;
+    private IndexRepository indexRepository;
     private RequestSettings jsoupRequestSettings;
     private List<ForkJoinTask<Boolean>> siteIndexerRecursiveTasks = new ArrayList<>();
-    private Boolean start = true;
     public void startIndexing() {
         System.out.println(
                 "Старт индексации сайта: "
@@ -43,13 +47,20 @@ public class SiteIndexer {
     }
 
     public void stopIndexing() {
-        start = false;
         System.out.println(
             "Начало остановки индексации сайта: "
                     + siteEntity.getName()
                     + ". С адресом: "
                     + siteEntity.getUrl()
         );
+        if (siteEntity.getStatus() == Status.INDEXED) {
+            return;
+        }
+        for (ForkJoinTask<Boolean> task : siteIndexerRecursiveTasks) {
+            if(!task.isDone()) {
+                task.cancel(true);
+            }
+        }
         siteEntity.setStatus(Status.FAILED);
         siteEntity.setLastError("Индексация остановлена пользователем");
         siteRepository.save(siteEntity);
@@ -74,6 +85,13 @@ public class SiteIndexer {
         executor.setUniqueUrls(uniqueUrls);
         executor.setForkJoinTasks(siteIndexerRecursiveTasks);
         executor.setIndexPath(false);
+        executor.setLemmaRepository(lemmaRepository);
+        executor.setIndexRepository(indexRepository);
+        try {
+            executor.setLemmaFinder(LemmaFinder.getInstance());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return executor;
     }
 
