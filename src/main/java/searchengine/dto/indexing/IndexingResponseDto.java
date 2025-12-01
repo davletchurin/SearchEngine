@@ -1,9 +1,8 @@
 package searchengine.dto.indexing;
 
-import lombok.Getter;
+import lombok.Data;
 
-
-@Getter
+@Data
 public final class IndexingResponseDto implements IndexingResponse {
     private final boolean result = true;
 }

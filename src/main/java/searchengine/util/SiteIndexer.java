@@ -12,7 +12,6 @@ import searchengine.repositories.LemmaRepository;
 import searchengine.repositories.PageRepository;
 import searchengine.repositories.SiteRepository;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -87,11 +86,7 @@ public class SiteIndexer {
         executor.setIndexPath(false);
         executor.setLemmaRepository(lemmaRepository);
         executor.setIndexRepository(indexRepository);
-        try {
-            executor.setLemmaFinder(LemmaFinder.getInstance());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        executor.setLemmaFinder(LemmaFinder.getInstance());
         return executor;
     }
 

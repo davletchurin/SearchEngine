@@ -20,9 +20,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -62,8 +59,6 @@ public class IndexingService {
             return new ErrorResponse("Индексация не запущена");
         }
 
-        // Если зависла кнопка на stop indexing, а пул закончил свою работу - pool.isShutdown() не поможет нужно придумать другое решение
-
         boolean quiet;
         pool.shutdown();
         try {
@@ -84,6 +79,10 @@ public class IndexingService {
             return new ErrorResponse("Задан пустой запрос");
         }
 
+        if (true) {
+            return new ErrorResponse("Данная страница находится за пределами сайтов, " +
+                    "указанных в конфигурационном файле");
+        }
         return new IndexingResponseDto();
     }
 
@@ -120,39 +119,6 @@ public class IndexingService {
         siteIndexer.setIndexRepository(indexRepository);
         return siteIndexer;
     }
-
-    private Map<String, String> getAbsUrlsForIndexPage (String url) {
-        Map<String, String> urls = new HashMap<>();
-        if (url.matches("^/.*")) {
-            for(Site site : sitesList.getSites()) {
-                urls.put(site.getUrl() + url.replaceFirst("/", ""), url);
-            }
-            return urls;
-        }
-
-        if (url.matches("^https?://.*")) {
-            String rootUrl = getRootUrl(url);
-
-
-            return urls;
-        }
-
-        return null;
-    }
-
-    private String getRootUrl(String url) {
-        Pattern pattern = Pattern.compile("https?://[^/]+/?");
-        Matcher matcher = pattern.matcher(url);
-        String rootUrl = "";
-        while (matcher.find()) {
-            rootUrl = matcher.group();
-            if (!rootUrl.matches(".*/$")) {
-                rootUrl = rootUrl + "/";
-            }
-        }
-        return rootUrl;
-    }
-
     public void printPoolStats() {
         System.out.println('\n' + "=== Состояние пула ===");
         System.out.println("Размер пула: " + pool.getPoolSize());
