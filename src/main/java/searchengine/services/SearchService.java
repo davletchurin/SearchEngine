@@ -51,7 +51,7 @@ public class SearchService {
             List<LemmaEntity> lemmaEntitiesOrderByFrequencyAsc =
                     lemmaRepository.findAll(Sort.by(Sort.Order.asc("frequency")));
             for (LemmaEntity lemmaEntity : lemmaEntitiesOrderByFrequencyAsc) {
-                Set<PageEntity> pageEntities = lemmaEntity.getPageEntities();
+                //Set<PageEntity> pageEntities = lemmaEntity.getPageEntities();
 
             }
 

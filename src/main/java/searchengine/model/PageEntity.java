@@ -5,8 +5,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import javax.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "page", indexes = {
@@ -29,6 +27,4 @@ public class PageEntity {
     private int code;
     @Column(columnDefinition = "MEDIUMTEXT", nullable = false)
     private String content;
-    @ManyToMany(fetch = FetchType.LAZY, mappedBy = "pageEntities")
-    private Set<LemmaEntity> lemmaEntities = new HashSet<>();
 }

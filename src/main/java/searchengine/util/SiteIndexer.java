@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 import searchengine.config.RequestSettings;
-import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
 import searchengine.repositories.IndexRepository;
@@ -99,17 +98,5 @@ public class SiteIndexer {
             return path.isEmpty() ? "/" : path;
         }
         return "/";
-    }
-
-    public Set<String> getPaths() {
-        List<PageEntity> pageEntities = pageRepository.findAllBySiteId(siteEntity);
-        if (pageEntities == null) {
-            return new HashSet<>();
-        }
-        Set<String> paths = new HashSet<>();
-        for (PageEntity pageEntity : pageEntities) {
-            paths.add(pageEntity.getPath());
-        }
-        return paths;
     }
 }

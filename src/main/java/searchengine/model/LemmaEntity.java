@@ -4,8 +4,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import javax.persistence.*;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "lemma", uniqueConstraints = {
@@ -27,12 +25,4 @@ public class LemmaEntity {
 
     @Column(columnDefinition = "INT", nullable = false)
     private Integer frequency;
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "`index`",
-            joinColumns = @JoinColumn(name = "lemma_id"),
-            inverseJoinColumns = @JoinColumn(name = "path_id")
-    )
-    private Set<PageEntity> pageEntities = new HashSet<>();
 }

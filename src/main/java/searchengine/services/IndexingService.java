@@ -20,6 +20,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -79,11 +81,76 @@ public class IndexingService {
             return new ErrorResponse("Задан пустой запрос");
         }
 
-        if (true) {
+        HashMap<String, SiteEntity> urls = getUrlsForIndexPath(url);
+
+        if (urls == null) {
             return new ErrorResponse("Данная страница находится за пределами сайтов, " +
                     "указанных в конфигурационном файле");
         }
+
+        for (String pageUrl : urls.keySet()) {
+            SiteEntity siteEntity = urls.get(pageUrl);
+            SiteIndexer siteIndexer = createSiteIndexer(siteEntity);
+            siteIndexer.indexPath(pageUrl);
+        }
         return new IndexingResponseDto();
+    }
+
+    private HashMap<String, SiteEntity> getUrlsForIndexPath(String url) {
+        HashMap<String, SiteEntity> urls = null;
+
+        if (url.matches("^https?://.*/?(.*)?")) {
+            urls = getFormattedUrlsByAbsoluteUrl(url);
+        }
+
+        if (url.matches("^/[a-z0-9]*/?(.*)?")) {
+            urls = getFormattedUrlsByRelativeUrl(url);
+        }
+
+        return urls;
+    }
+
+    private HashMap<String, SiteEntity> getFormattedUrlsByAbsoluteUrl(String url) {
+        HashMap<String, SiteEntity> urls = null;
+
+        String rootUrl = getRootUrl(url);
+        for (Site site : sitesList.getSites()) {
+            if (site.getUrl().equals(rootUrl)) {
+                SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl()).orElse(createSiteEntity(site));
+                if (siteEntity.getId() == null) siteRepository.save(siteEntity);
+                urls = new HashMap<>();
+                urls.put(url, siteEntity);
+                break;
+            }
+        }
+
+        return urls;
+    }
+
+    private String getRootUrl(String url) {
+        Pattern pattern = Pattern.compile("https?://[^/]+/?");
+        Matcher matcher = pattern.matcher(url);
+        String rootUrl = "";
+        while (matcher.find()) {
+            rootUrl = matcher.group();
+            if (!rootUrl.matches(".*/$")) {
+                rootUrl = rootUrl + "/";
+            }
+        }
+        return rootUrl;
+    }
+
+    private HashMap<String, SiteEntity> getFormattedUrlsByRelativeUrl(String url) {
+        HashMap<String, SiteEntity> urls = new HashMap<>();
+
+        for (Site site : sitesList.getSites()) {
+            SiteEntity siteEntity = siteRepository.findByUrl(site.getUrl()).orElse(createSiteEntity(site));
+            if (siteEntity.getId() == null) siteRepository.save(siteEntity);
+            String formattedUrl = siteEntity.getUrl() + url.replaceFirst("/", "");
+            urls.put(formattedUrl, siteEntity);
+        }
+
+        return urls;
     }
 
     public void deleteSiteWithPages(SiteEntity entity) {

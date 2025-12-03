@@ -50,6 +50,20 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
         }
         uniqueUrls.add(relUrl);
 
+        if (indexPath && pageRepository.existsBySiteIdAndPath(siteEntity, relUrl)) {
+            PageEntity pageEntity = pageRepository.findBySiteIdAndPath(siteEntity, relUrl).get();
+            List<IndexEntity> indexEntities = indexRepository.findAllByPageId(pageEntity);
+
+            List<LemmaEntity> lemmaEntities = new ArrayList<>();
+            for (IndexEntity indexEntity : indexEntities) {
+                LemmaEntity lemmaEntity = indexEntity.getLemmaId();
+                indexRepository.delete(indexEntity);
+                lemmaEntities.add(lemmaEntity);
+            }
+            lemmaRepository.deleteAll(lemmaEntities);
+            pageRepository.delete(pageEntity);
+        }
+
         Connection.Response response = getResponse();
         if (response == null) {
             return false;
