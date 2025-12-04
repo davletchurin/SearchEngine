@@ -55,7 +55,7 @@ public class ApiController {
         int offsetToInt = Integer.parseInt(offset);
         int limitToInt = Integer.parseInt(limit);
         String formattedSite = site + "/";
-        return new ResponseEntity<>(searchService.search(query, site, offsetToInt, limitToInt), HttpStatus.OK);
+        return new ResponseEntity<>(searchService.search(query, formattedSite, offsetToInt, limitToInt), HttpStatus.OK);
     }
 
     @GetMapping("/pool")

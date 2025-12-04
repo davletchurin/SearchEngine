@@ -39,9 +39,9 @@ public class SearchService {
             return new ErrorResponse("Указанная страница не найдена");
         }
 
-        List<SiteEntity> siteEntities = new ArrayList<>();
+        List<SiteEntity> siteEntities;
         if (!site.isEmpty() && siteRepository.existsByUrl(site)) {
-            siteEntities.add(siteRepository.findByUrl(site).get());
+            siteEntities = List.of(siteRepository.findByUrl(site).get());
         } else {
             siteEntities = siteRepository.findAll();
         }
@@ -49,9 +49,12 @@ public class SearchService {
         Set<String> uniqueLemmas = lemmaFinder.getLemmaSet(query);
         for (String lemma : uniqueLemmas) {
             List<LemmaEntity> lemmaEntitiesOrderByFrequencyAsc =
-                    lemmaRepository.findAll(Sort.by(Sort.Order.asc("frequency")));
+                    lemmaRepository.findAllByLemmaAndSiteId(
+                            lemma, siteEntities, Sort.by(Sort.Order.asc("frequency"))
+                    );
+
             for (LemmaEntity lemmaEntity : lemmaEntitiesOrderByFrequencyAsc) {
-                //Set<PageEntity> pageEntities = lemmaEntity.getPageEntities();
+                List<PageEntity> pageEntities = getPageEntities(lemmaEntity);
 
             }
 
@@ -76,5 +79,14 @@ public class SearchService {
 
         searchResponse.setData(data);
         return searchResponse;
+    }
+
+    private List<PageEntity> getPageEntities(LemmaEntity lemmaEntity) {
+        List<IndexEntity> indexEntities = indexRepository.findAllByLemmaId(lemmaEntity);
+        List<PageEntity> pageEntities = new ArrayList<>();
+        for (IndexEntity indexEntity : indexEntities) {
+            pageEntities.add(indexEntity.getPageId());
+        }
+        return pageEntities;
     }
 }
