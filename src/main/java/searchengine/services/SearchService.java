@@ -1,6 +1,8 @@
 package searchengine.services;
 
 import lombok.RequiredArgsConstructor;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import searchengine.dto.ErrorResponse;
@@ -88,5 +90,13 @@ public class SearchService {
             pageEntities.add(indexEntity.getPageId());
         }
         return pageEntities;
+    }
+
+
+
+    private String getTitle(String content) {
+        Document document = Jsoup.parse(content); // ???
+        String title = document.selectFirst("title").text();
+        return title;
     }
 }
