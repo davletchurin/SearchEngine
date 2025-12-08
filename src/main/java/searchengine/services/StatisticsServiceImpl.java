@@ -24,12 +24,6 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public StatisticsResponse getStatistics() {
-        String[] statuses = { "INDEXED", "FAILED", "INDEXING" };
-        String[] errors = {
-                "Ошибка индексации: главная страница сайта не доступна",
-                "Ошибка индексации: сайт не доступен",
-                ""
-        };
 
         TotalStatistics total = new TotalStatistics();
         List<SiteEntity> sitesList = siteRepository.findAll();
@@ -38,8 +32,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
 
-        for(int i = 0; i < sitesList.size(); i++) {
-            SiteEntity siteEntity = sitesList.get(i);
+        for (SiteEntity siteEntity : sitesList) {
             DetailedStatisticsItem item = new DetailedStatisticsItem();
             item.setName(siteEntity.getName());
             String url = siteEntity.getUrl().replaceAll(".$", "");

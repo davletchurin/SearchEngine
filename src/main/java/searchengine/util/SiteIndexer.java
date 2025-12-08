@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.stereotype.Component;
 import searchengine.config.RequestSettings;
+import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.model.Status;
 import searchengine.repositories.IndexRepository;
@@ -39,6 +40,9 @@ public class SiteIndexer {
                         + ". С адресом: "
                         + siteEntity.getUrl()
         );
+        deleteAllBySiteEntity();
+        siteEntity.setStatus(Status.INDEXING);
+        siteRepository.save(siteEntity);
         IndexerExecutor executor = createExecutor();
         ForkJoinTask<Boolean> task = pool.submit(executor);
         siteIndexerRecursiveTasks.add(task);
@@ -98,5 +102,14 @@ public class SiteIndexer {
             return path.isEmpty() ? "/" : path;
         }
         return "/";
+    }
+
+    private void deleteAllBySiteEntity() {
+        List<PageEntity> pageEntities = pageRepository.findAllBySiteId(siteEntity);
+        for (PageEntity pageEntity : pageEntities) {
+            indexRepository.deleteAllByPageId(pageEntity);
+        }
+        lemmaRepository.deleteAllBySiteId(siteEntity);
+        pageRepository.deleteAllBySiteId(siteEntity);
     }
 }

@@ -21,6 +21,8 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Getter
 @Setter
@@ -175,8 +177,12 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
         Elements elements = document.select("a");
 
         for (Element element : elements) {
-            String rel = element.attr("href");
             String abs = element.attr("abs:href");
+            String rel = getRelUrlFromAbs(abs);
+
+            if (!abs.matches(siteEntity.getUrl() + ".*")) {
+                continue;
+            }
 
             if (!rel.matches("^/.*")) {
                 continue;
@@ -195,6 +201,17 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
             links.put(abs, rel);
         }
         return links;
+    }
+
+    public String getRelUrlFromAbs(String absUrl) {
+        Pattern pattern = java.util.regex.Pattern.compile("https?://[^/]+(/[^?#]*)");
+        Matcher matcher = pattern.matcher(absUrl);
+
+        if (matcher.find()) {
+            String path = matcher.group(1);
+            return path.isEmpty() ? "/" : path;
+        }
+        return "/";
     }
 
     private PageEntity createPageEntity(Connection.Response response, Document document) {

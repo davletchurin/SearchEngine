@@ -54,7 +54,7 @@ public class ApiController {
     ) {
         int offsetToInt = Integer.parseInt(offset);
         int limitToInt = Integer.parseInt(limit);
-        String formattedSite = site + "/";
+        String formattedSite = site.isEmpty() ? "" : site + "/";
         return new ResponseEntity<>(searchService.search(query, formattedSite, offsetToInt, limitToInt), HttpStatus.OK);
     }
 
