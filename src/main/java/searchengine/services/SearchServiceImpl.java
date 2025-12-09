@@ -125,7 +125,7 @@ public class SearchServiceImpl implements SearchService {
         String title = document.title();
         item.setTitle(title);
 
-        item.setSnippet(createSnippet(document.outerHtml(), lemmas));
+        item.setSnippet(createSnippet(document.text(), lemmas));
         item.setRelevance(relevance);
         return item;
     }
