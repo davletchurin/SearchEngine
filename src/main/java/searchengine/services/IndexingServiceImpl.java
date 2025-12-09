@@ -184,24 +184,4 @@ public class IndexingServiceImpl implements IndexingService {
         siteIndexer.setIndexRepository(indexRepository);
         return siteIndexer;
     }
-
-    @Override
-    public void printPoolStats() {
-        System.out.println('\n' + "=== Состояние пула ===");
-        System.out.println("Размер пула: " + pool.getPoolSize());
-        System.out.println("Активные потоки: " + pool.getActiveThreadCount());
-        System.out.println("Работающие потоки: " + pool.getRunningThreadCount());
-        System.out.println("Задачи в очередях: " + pool.getQueuedTaskCount());
-        System.out.println("Внешние задачи в очередях: " + pool.getQueuedSubmissionCount());
-        System.out.println("Количество краж: " + pool.getStealCount());
-        System.out.println("Пул простаивает(проверка на состояние покоя): " + pool.isQuiescent());
-        System.out.println("Параллелизм: " + pool.getParallelism());
-        System.out.println("Уровень параллелизма: " + pool.getParallelism());
-        System.out.println("=====================");
-        System.out.println("Пул простаивает(в состояние покоя): " + pool.isQuiescent());
-        System.out.println("Пул в работе: " + !pool.isQuiescent() + " - задачи + внешние задачи в очередях: " + pool.getQueuedTaskCount() + " + " + pool.getQueuedSubmissionCount());
-        System.out.println("Вызыван метод shutdown(), началось завершение: " + pool.isShutdown());
-        System.out.println("Пул в состоянии завершения: " + pool.isTerminating());
-        System.out.println("Пул завершил работу: " + pool.isTerminated() + '\n');
-    }
 }

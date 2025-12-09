@@ -57,9 +57,4 @@ public class ApiController {
         String formattedSite = site.isEmpty() ? "" : site + "/";
         return new ResponseEntity<>(searchService.search(query, formattedSite, offsetToInt, limitToInt), HttpStatus.OK);
     }
-
-    @GetMapping("/pool")
-    public void poolStatus() {
-        indexingService.printPoolStats();
-    }
 }

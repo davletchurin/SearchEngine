@@ -19,6 +19,7 @@ import searchengine.repositories.SiteRepository;
 import searchengine.util.LemmaFinder;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -87,7 +88,31 @@ public class SearchServiceImpl implements SearchService {
     }
 
     public String createSnippet(String text, Set<String> lemmas) {
-        return "";
+        if (text == null || text.isEmpty() || lemmas == null || lemmas.isEmpty()) {
+            return text != null && text.length() > 200 ? text.substring(0, 200) + "..." : text;
+        }
+
+        String lowerText = text.toLowerCase();
+
+        for (String lemma : lemmas) {
+            if (lemma == null || lemma.isEmpty()) continue;
+
+            int index = lowerText.indexOf(lemma.toLowerCase());
+            if (index != -1) {
+
+                int start = Math.max(0, index - 50);
+                int end = Math.min(text.length(), index + lemma.length() + 100);
+
+                String snippet = text.substring(start, end);
+
+                String safeLemma = Pattern.quote(lemma);
+                String highlighted = snippet.replaceAll("(?i)(" + safeLemma + ")", "<b>$1</b>");
+
+                return (start > 0 ? "..." : "") + highlighted + (end < text.length() ? "..." : "");
+            }
+        }
+
+        return text.length() > 200 ? text.substring(0, 200) + "..." : text;
     }
 
     private DetailedDataItem createDataItem(PageEntity pageEntity, Float relevance, Set<String> lemmas) {

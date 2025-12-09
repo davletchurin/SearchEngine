@@ -9,5 +9,4 @@ import java.util.Optional;
 @Repository
 public interface SiteRepository extends JpaRepository<SiteEntity, Long> {
     Optional<SiteEntity> findByUrl(String url);
-    boolean existsByUrl(String url);
 }

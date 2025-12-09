@@ -12,7 +12,6 @@ import java.util.Optional;
 public interface PageRepository extends JpaRepository<PageEntity, Long> {
     void deleteAllBySiteId(SiteEntity siteEntity);
     boolean existsBySiteIdAndPath(SiteEntity siteEntity, String path);
-    void deleteByPath(String path);
     List<PageEntity> findAllBySiteId(SiteEntity siteEntity);
     int countBySiteId(SiteEntity siteEntity);
     Optional<PageEntity> findBySiteIdAndPath(SiteEntity siteEntity, String relUrl);
