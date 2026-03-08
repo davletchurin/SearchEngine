@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Getter
 @Setter
 @Component
-@ConfigurationProperties(prefix = "jsoup-settings") // TODO: нужен????
+@ConfigurationProperties(prefix = "jsoup-settings")
 public class RequestSettings {
     private String agent;
     private String referrer;

@@ -1,4 +1,4 @@
-package org.example.searchengine.services;
+package org.example.searchengine.services.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.example.searchengine.config.RequestSettings;
@@ -6,6 +6,7 @@ import org.example.searchengine.config.Site;
 import org.example.searchengine.config.SitesList;
 import org.example.searchengine.model.PageEntity;
 import org.example.searchengine.model.Status;
+import org.example.searchengine.services.IndexingService;
 import org.example.searchengine.util.SiteIndexer;
 import org.springframework.stereotype.Service;
 import org.example.searchengine.dto.ErrorResponse;
