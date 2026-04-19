@@ -19,7 +19,7 @@ public class PageEntity {
     private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "site_id", nullable = false)
-    private SiteEntity siteId;
+    private SiteEntity site;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String path;
