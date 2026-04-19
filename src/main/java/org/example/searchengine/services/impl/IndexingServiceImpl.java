@@ -4,7 +4,6 @@ import lombok.RequiredArgsConstructor;
 import org.example.searchengine.config.RequestSettings;
 import org.example.searchengine.config.Site;
 import org.example.searchengine.config.SitesList;
-import org.example.searchengine.model.PageEntity;
 import org.example.searchengine.model.Status;
 import org.example.searchengine.services.IndexingService;
 import org.example.searchengine.util.SiteIndexer;
@@ -159,10 +158,18 @@ public class IndexingServiceImpl implements IndexingService {
         return urls;
     }
 
-    public void deleteSiteWithPages(SiteEntity entity) {
-        long id = entity.getId();
-        pageRepository.deleteAllBySiteId(entity);
-        siteRepository.deleteById(id);
+    @Transactional
+    public void deleteById(SiteEntity siteEntity) {
+        deleteAllBySiteEntity(siteEntity);
+        siteRepository.deleteById(siteEntity.getId());
+    }
+
+    @Transactional
+    public void deleteAllBySiteEntity(SiteEntity siteEntity) {
+        Long siteId = siteEntity.getId();
+        indexRepository.deleteBySiteId(siteId);
+        lemmaRepository.deleteBySiteId(siteId);
+        pageRepository.deleteBySiteId(siteId);
     }
 
     private SiteEntity createSiteEntity(Site site) {
@@ -178,6 +185,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     private SiteIndexer createSiteIndexer(SiteEntity siteEntity) {
         SiteIndexer siteIndexer = new SiteIndexer();
+        siteIndexer.setIndexingService(this);
         siteIndexer.setPool(pool);
         siteIndexer.setSiteRepository(siteRepository);
         siteIndexer.setPageRepository(pageRepository);

@@ -20,7 +20,7 @@ import org.example.searchengine.model.PageEntity;
 import org.example.searchengine.util.LemmaFinder;
 
 import java.util.*;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,8 +45,8 @@ public class SearchServiceImpl implements SearchService {
         TreeSet<LemmaEntity> lemmaEntities = new TreeSet<>(Comparator.comparing(LemmaEntity::getFrequency));
         for (String lemma : queryLemmas) {
             for (SiteEntity siteEntity : siteEntities) {
-                LemmaEntity lemmaEntity = lemmaRepository.findBySiteIdAndLemma(siteEntity, lemma).orElse(null);
-                int maxFrequency = pageRepository.countBySiteId(siteEntity);
+                LemmaEntity lemmaEntity = lemmaRepository.findBySiteAndLemma(siteEntity, lemma).orElse(null);
+                int maxFrequency = pageRepository.countBySite(siteEntity);
                 if (lemmaEntity != null && lemmaEntity.getFrequency() < (maxFrequency * percent)) {
                     lemmaEntities.add(lemmaEntity);
                 }
@@ -58,84 +58,117 @@ public class SearchServiceImpl implements SearchService {
             pageEntities.addAll(getPageEntities(lemmaEntity));
         }
 
-        if (pageEntities.size() == 0) {
+        if (pageEntities.isEmpty()) {
             return getEmptySearchResponse();
         }
 
-        Map<PageEntity, Float> pagesToRelevance = new HashMap<>();
-        for (PageEntity pageEntity : pageEntities) {
-            float absRelevance = 0F;
-            for (IndexEntity indexEntity : indexRepository.findAllByPageId(pageEntity)) {
-                absRelevance = absRelevance + indexEntity.getRank();
+        List<IndexEntity> allQueryIndexes = indexRepository.findAllByPageInAndLemmaIn(pageEntities, lemmaEntities);
+
+        Map<PageEntity, List<IndexEntity>> indexesByPage = allQueryIndexes.stream()
+                .collect(Collectors.groupingBy(IndexEntity::getPage));
+
+        Map<PageEntity, Float> pageAbsRelevance = new HashMap<>();
+        float maxAbsRelevance = 0.0f;
+
+        for (Map.Entry<PageEntity, List<IndexEntity>> entry : indexesByPage.entrySet()) {
+            PageEntity pageEntity = entry.getKey();
+            List<IndexEntity> queryIndexes = entry.getValue();
+
+            float absRelevance = 0.0f;
+            for (IndexEntity indexEntity : queryIndexes) {
+                absRelevance += indexEntity.getRank();
             }
-            pagesToRelevance.put(pageEntity, absRelevance);
+
+            pageAbsRelevance.put(pageEntity, absRelevance);
+
+            if (absRelevance > maxAbsRelevance) {
+                maxAbsRelevance = absRelevance;
+            }
         }
 
-        float maxAbsRelevanceValue = pagesToRelevance.values().stream().max(Comparator.naturalOrder()).get();
-
-        pagesToRelevance.replaceAll((e, v) -> pagesToRelevance.get(e) / maxAbsRelevanceValue);
-
         List<DetailedDataItem> detailedDataItems = new ArrayList<>();
-        for (PageEntity pageEntity : pagesToRelevance.keySet()) {
-            DetailedDataItem item = createDataItem(pageEntity, pagesToRelevance.get(pageEntity), queryLemmas);
+        for (Map.Entry<PageEntity, Float> entry : pageAbsRelevance.entrySet()) {
+            PageEntity pageEntity = entry.getKey();
+            float absRev = entry.getValue();
+
+            float relativeRelevance = absRev / maxAbsRelevance;
+
+            DetailedDataItem item = createDataItem(pageEntity, relativeRelevance, query);
             detailedDataItems.add(item);
         }
 
-        detailedDataItems = detailedDataItems.stream()
-                .sorted(Comparator.comparing(DetailedDataItem::getRelevance).reversed())
-                .toList();
+        detailedDataItems.sort(Comparator.comparing(DetailedDataItem::getRelevance)
+                .reversed());
 
         return getFullSearchResponse(detailedDataItems);
     }
 
-    public String createSnippet(String text, Set<String> lemmas) {
-        if (text == null || text.isEmpty() || lemmas == null || lemmas.isEmpty()) {
-            return text != null && text.length() > 200 ? text.substring(0, 200) + "..." : text;
-        }
+    private String createSnippet(String content, String query) {
+        String clearText = Jsoup.parse(content).text();
+        Set<String> queryLemmas = lemmaFinder.getLemmaSet(query);
 
-        String lowerText = text.toLowerCase();
+        String[] words = clearText.split("\\s+");
+        List<Integer> hitIndices = new ArrayList<>();
 
-        for (String lemma : lemmas) {
-            if (lemma == null || lemma.isEmpty()) continue;
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i].replaceAll("[^а-яА-ЯeEa-zA-Z]", "");
+            if (word.isEmpty()) continue;
 
-            int index = lowerText.indexOf(lemma.toLowerCase());
-            if (index != -1) {
-
-                int start = Math.max(0, index - 50);
-                int end = Math.min(text.length(), index + lemma.length() + 100);
-
-                String snippet = text.substring(start, end);
-
-                String safeLemma = Pattern.quote(lemma);
-                String highlighted = snippet.replaceAll("(?i)(" + safeLemma + ")", "<b>$1</b>");
-
-                return (start > 0 ? "..." : "") + highlighted + (end < text.length() ? "..." : "");
+            Set<String> wordLemmas = lemmaFinder.getLemmaSet(word);
+            if (!Collections.disjoint(wordLemmas, queryLemmas)) {
+                hitIndices.add(i);
             }
         }
 
-        return text.length() > 200 ? text.substring(0, 200) + "..." : text;
+        if (hitIndices.isEmpty()) {
+            return clearText.substring(0, Math.min(clearText.length(), 200)) + "...";
+        }
+
+        int firstHit = hitIndices.get(0);
+        int start = Math.max(0, firstHit - 15);
+        int end = Math.min(words.length, firstHit + 15);
+
+        StringBuilder snippet = new StringBuilder();
+        if (start > 0) snippet.append("... ");
+
+        for (int i = start; i < end; i++) {
+            String currentWord = words[i];
+            String strippedWord = currentWord.replaceAll("[^а-яА-ЯeEa-zA-Z]", "");
+
+            Set<String> currentLemmas = lemmaFinder.getLemmaSet(strippedWord);
+            if (!Collections.disjoint(currentLemmas, queryLemmas)) {
+                snippet.append("<b>").append(currentWord).append("</b>");
+            } else {
+                snippet.append(currentWord);
+            }
+            snippet.append(" ");
+        }
+
+        if (end < words.length) snippet.append("...");
+
+        return snippet.toString().trim();
     }
 
-    private DetailedDataItem createDataItem(PageEntity pageEntity, Float relevance, Set<String> lemmas) {
+    private DetailedDataItem createDataItem(PageEntity pageEntity, Float relevance, String query) {
         DetailedDataItem item = new DetailedDataItem();
-        item.setSite(pageEntity.getSiteId().getUrl().replaceAll(".$",""));
-        item.setSiteName(pageEntity.getSiteId().getName());
+        item.setSite(pageEntity.getSite().getUrl().replaceAll(".$",""));
+        item.setSiteName(pageEntity.getSite().getName());
         item.setUri(pageEntity.getPath());
 
         Document document = Jsoup.parse(pageEntity.getContent());
         String title = document.title();
         item.setTitle(title);
 
-        item.setSnippet(createSnippet(document.text(), lemmas));
+        item.setSnippet(createSnippet(document.text(), query));
         item.setRelevance(relevance);
         return item;
     }
 
     private Set<PageEntity> getPageEntities(LemmaEntity lemmaEntity) {
-        List<IndexEntity> indexEntities = indexRepository.findAllByLemmaId(lemmaEntity);
+        List<IndexEntity> indexEntities = indexRepository.findAllByLemma(lemmaEntity);
         Set<PageEntity> pageEntities = new HashSet<>();
         for (IndexEntity indexEntity : indexEntities) {
-            pageEntities.add(indexEntity.getPageId());
+            pageEntities.add(indexEntity.getPage());
         }
         return pageEntities;
     }
