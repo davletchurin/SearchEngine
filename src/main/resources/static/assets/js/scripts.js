@@ -1945,6 +1945,34 @@ var Tabs = function(){
     };
 };
 Tabs().init();
+
+// --- АВТО-СИНХРОНИЗАЦИЯ КНОПКИ ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ ---
+    setTimeout(function() {
+        // Делаем фоновый запрос по тому же адресу, что и статистика
+        $.get('/api/statistics', function(result) {
+            // Если сервер ответил успешно и индексация сейчас ИДЕТ
+            if (result.result && result.statistics && result.statistics.total.isIndexing) {
+                var $btn = $('.btn[data-send="startIndexing"]');
+
+                // Если кнопка найдена на странице и она в состоянии "Старт"
+                if ($btn.length > 0) {
+                    var $content = $btn.find('.btn-content');
+                    var altText = $btn.attr('data-alttext'); // берем "Stop Indexing" из HTML
+                    var currentText = $content.text(); // сохраняем "Start Indexing"
+
+                    // Меняем текст, атрибуты и внутренний data-кэш jQuery
+                    $content.text(altText);
+                    $btn.attr('data-alttext', currentText);
+                    $btn.attr('data-send', 'stopIndexing');
+                    $btn.data('send', 'stopIndexing');
+                    $btn.addClass('btn_check');
+                    $('.UpdatePageBlock').hide();
+                }
+            }
+        });
+    }, 400); // Небольшая задержка, чтобы DOM точно успел построиться
+    // --- КОНЕЦ АВТО-СИНХРОНИЗАЦИИ ---
+
 // setTimeout(function(){
 //     $('body').css('opacity', '1');
 // }, 100);
