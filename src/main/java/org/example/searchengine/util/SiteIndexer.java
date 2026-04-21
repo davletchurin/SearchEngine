@@ -55,6 +55,7 @@ public class SiteIndexer {
         IndexerExecutor executor = createExecutor();
         executor.setRelUrl(getRelUrl(absUrl));
         executor.setIndexPath(true);
+        executor.setAbsUrl(absUrl);
         pool.submit(executor);
         pool.shutdown();
     }
