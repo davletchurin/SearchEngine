@@ -22,6 +22,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     private final SiteRepository siteRepository;
     private final PageRepository pageRepository;
     private final LemmaRepository lemmaRepository;
+    private final IndexingServiceImpl indexingService;
 
     @Override
     public StatisticsResponse getStatistics() {
@@ -29,7 +30,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         TotalStatistics total = new TotalStatistics();
         List<SiteEntity> sitesList = siteRepository.findAll();
         total.setSites(sitesList.size());
-        total.setIndexing(total.getSites() != 0);
+        total.setIndexing(indexingService.isIndexing());
 
         List<DetailedStatisticsItem> detailed = new ArrayList<>();
 

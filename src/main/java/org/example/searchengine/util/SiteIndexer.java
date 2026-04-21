@@ -15,7 +15,6 @@ import org.example.searchengine.repositories.SiteRepository;
 
 import java.util.*;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,15 +31,13 @@ public class SiteIndexer {
     private LemmaRepository lemmaRepository;
     private IndexRepository indexRepository;
     private RequestSettings jsoupRequestSettings;
-    private List<ForkJoinTask<Boolean>> siteIndexerRecursiveTasks = new ArrayList<>();
     public void startIndexing() {
         log.info("Старт индексации сайта: {}. С адресом: {}", siteEntity.getName(), siteEntity.getUrl());
         indexingService.deleteAllBySiteEntity(siteEntity);
         siteEntity.setStatus(Status.INDEXING);
         siteRepository.save(siteEntity);
         IndexerExecutor executor = createExecutor();
-        ForkJoinTask<Boolean> task = pool.submit(executor);
-        siteIndexerRecursiveTasks.add(task);
+        pool.submit(executor);
     }
 
     public void stopIndexing() {
@@ -48,11 +45,7 @@ public class SiteIndexer {
         if (siteEntity.getStatus() == Status.INDEXED) {
             return;
         }
-        for (ForkJoinTask<Boolean> task : siteIndexerRecursiveTasks) {
-            if(!task.isDone()) {
-                task.cancel(true);
-            }
-        }
+        pool.shutdownNow();
         siteEntity.setStatus(Status.FAILED);
         siteEntity.setLastError("Индексация остановлена пользователем");
         siteRepository.save(siteEntity);
@@ -63,6 +56,7 @@ public class SiteIndexer {
         executor.setRelUrl(getRelUrl(absUrl));
         executor.setIndexPath(true);
         pool.submit(executor);
+        pool.shutdown();
     }
 
     public IndexerExecutor createExecutor() {
@@ -75,7 +69,6 @@ public class SiteIndexer {
         executor.setAbsUrl(siteEntity.getUrl());
         executor.setRelUrl("/");
         executor.setUniqueUrls(uniqueUrls);
-        executor.setForkJoinTasks(siteIndexerRecursiveTasks);
         executor.setIndexPath(false);
         executor.setLemmaRepository(lemmaRepository);
         executor.setIndexRepository(indexRepository);
