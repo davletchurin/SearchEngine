@@ -20,7 +20,6 @@ import org.example.searchengine.repositories.SiteRepository;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.RecursiveTask;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -37,7 +36,6 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
     private String absUrl;
     private String relUrl;
     private Set<String> uniqueUrls;
-    private List<ForkJoinTask<Boolean>> forkJoinTasks;
     private Boolean indexPath;
     private LemmaFinder lemmaFinder;
     private LemmaRepository lemmaRepository;
@@ -45,8 +43,8 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
 
     @Override
     protected Boolean compute() {
-        if (isCancelled()) {
-            return null;
+        if (Thread.currentThread().isInterrupted() ||isCancelled()) {
+            return false;
         }
 
         if (uniqueUrls.contains(relUrl)) {
@@ -64,7 +62,8 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
                 indexRepository.delete(indexEntity);
                 lemmaEntities.add(lemmaEntity);
             }
-            lemmaRepository.deleteAll(lemmaEntities);
+            lemmaRepository.decrementFrequency(lemmaEntities);
+            lemmaRepository.deleteEmptyLemmas();
             pageRepository.delete(pageEntity);
         }
 
@@ -84,6 +83,8 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
 
         createLemmasAndIndexes(pageEntity, document);
 
+        log.info("Страница проиндексирована: {}", absUrl);
+
         if (indexPath) {
             return true;
         }
@@ -93,8 +94,7 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
         List<IndexerExecutor> executors = new ArrayList<>();
         for (String child : children.keySet()) {
             IndexerExecutor task = createExecutor(child, children);
-            ForkJoinTask<Boolean> forkJoinTask = task.fork();
-            forkJoinTasks.add(forkJoinTask);
+            task.fork();
             executors.add(task);
         }
 
@@ -147,6 +147,9 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
                     .execute();
         } catch (HttpStatusException e) {
             log.error("Не удалось получить доступ к сайту: {} Статус код: {}", e.getUrl(), e.getStatusCode());
+            return null;
+        } catch (InterruptedException e) {
+            log.error("Выполнено принудительное завершение спящего потока: {}. Откат в добавлении: {}", e.getMessage(), absUrl);
             return null;
         } catch (Exception e) {
             log.error(e.getMessage());
@@ -223,7 +226,6 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
         executor.setAbsUrl(child);
         executor.setRelUrl(children.get(child));
         executor.setUniqueUrls(uniqueUrls);
-        executor.setForkJoinTasks(forkJoinTasks);
         executor.setIndexPath(false);
         executor.setLemmaRepository(lemmaRepository);
         executor.setIndexRepository(indexRepository);

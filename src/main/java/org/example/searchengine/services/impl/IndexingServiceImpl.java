@@ -86,6 +86,16 @@ public class IndexingServiceImpl implements IndexingService {
             return new ErrorResponse("Задан пустой запрос");
         }
 
+        if (!url.matches("^https?:\\/\\/[^\\s$.?#].[^\\s]*$")) {
+            return new ErrorResponse("Передан относительный URL. " +
+                    "Ожидался абсолютный адрес (с указанием протокола http/https)");
+        }
+
+        if (pool.isShutdown() || pool.isTerminated()) {
+            pool = new ForkJoinPool();
+            siteIndexerList.clear();
+        }
+
         HashMap<String, SiteEntity> urls = getUrlsForIndexPath(url);
 
         if (urls == null) {
@@ -168,8 +178,8 @@ public class IndexingServiceImpl implements IndexingService {
     public void deleteAllBySiteEntity(SiteEntity siteEntity) {
         Long siteId = siteEntity.getId();
         indexRepository.deleteBySiteId(siteId);
-        lemmaRepository.deleteBySiteId(siteId);
         pageRepository.deleteBySiteId(siteId);
+        lemmaRepository.deleteBySiteId(siteId);
     }
 
     private SiteEntity createSiteEntity(Site site) {
@@ -194,5 +204,9 @@ public class IndexingServiceImpl implements IndexingService {
         siteIndexer.setLemmaRepository(lemmaRepository);
         siteIndexer.setIndexRepository(indexRepository);
         return siteIndexer;
+    }
+
+    public boolean isIndexing() {
+        return !pool.isQuiescent();
     }
 }
