@@ -26,8 +26,10 @@ spring:
 
 indexing-settings:
   sites:
-    - url: https://dimonvideo.ru/
-      name: Dimon Video
+    - url: https://artoftea.ru/
+      name: Магазин чая "Art of tea"
+    - url: https://vistastom.ru/
+      name: Стоматологическая клиника "Виста"
 
 jsoup-settings:
   agent: ${JSOUP_AGENT:Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36}
