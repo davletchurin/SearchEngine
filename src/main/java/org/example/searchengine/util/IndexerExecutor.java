@@ -103,6 +103,7 @@ public class IndexerExecutor extends RecursiveTask<Boolean> {
         }
 
         if (relUrl.equals("/")) {
+            siteEntity.setLastError("");
             siteEntity.setStatus(Status.INDEXED);
             siteRepository.save(siteEntity);
         }
