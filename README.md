@@ -15,7 +15,7 @@
 
 ## 📺 Демонстрация работы
 <p align="center">
-  <video src="docs/videos/demo.mp4" width="100%" controls autoplay loop muted></video>
+  <video src="https://github.com/user-attachments/assets/e20cb9d7-7d9f-44b4-be07-618a0cc9bc0e" width="100%" controls autoplay loop muted></video>
 </p>
 
 ---
